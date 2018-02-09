@@ -25,52 +25,68 @@ tokenController.mount = function(userId, callback) {
     )
 };
 
-tokenController.verify = function (req, res, next) {
-    var username = req.header('x-user');
-    var token = req.header('x-jwt');
+tokenController.verify = function (permissions) {
+    return function (req, res, next) {
+        var username = req.header('x-user');
+        var token = req.header('x-jwt');
 
-    new Promise(function(resolve, reject) {
-        // check fields exist
-        if (username && token){ resolve() }else{ reject() }
-    }).then(function() {
-        // verify jwt format
-        return new Promise(function(resolve, reject){
-            jwt.verify(token, config.jwt.secret, function(err, decoded) {
-                if (err) {
-                    reject();
+        new Promise(function (resolve, reject) {
+            // check fields exist
+            if (username && token) {
+                resolve()
+            } else {
+                reject()
+            }
+        }).then(function () {
+            // verify jwt format
+            return new Promise(function (resolve, reject) {
+                jwt.verify(token, config.jwt.secret, function (err, decoded) {
+                    if (err) {
+                        reject();
+                    } else {
+                        resolve(decoded.id);
+                    }
+                })
+            })
+        }).then(function (decodedUserId) {
+            // check user id decode from token is valid
+            return new Promise(function (resolve, reject) {
+                User.findById(decodedUserId, function (err, user) {
+                    if (user && (user.username === username)) {
+                        resolve(user)
+                    } else {
+                        reject()
+                    }
+                });
+            })
+        }).then(function (user) {
+            // check permission
+            return new Promise(function (resolve, reject) {
+                if (typeof (permissions) === 'undefined') resolve(user._id);
+                if (permissions.includes(user.role)) {
+                    resolve(user._id)
                 } else {
-                    resolve(decoded.id);
+                    reject()
                 }
             })
+        }).then(function (decodedUserId) {
+            // check if the token is unique
+            return new Promise(function (resolve, reject) {
+                Token.findOne({'token': token}, function (err, record) {
+                    if (record && (record._user.toString() === decodedUserId.toString())) {
+                        resolve(decodedUserId)
+                    } else {
+                        reject()
+                    }
+                });
+            })
+        }).then(function (decodedUserId) {
+            req.user_id = decodedUserId;
+            next();
+        }).catch(function () {
+            res.sendStatus(401);
         })
-    }).then(function(decodedUserId) {
-        // check user id decode from token is valid
-        return new Promise(function(resolve, reject){
-            User.findById(decodedUserId, function (err, user) {
-                if (user && (user.username === username)) {
-                    resolve(decodedUserId)
-                } else {
-                    reject()
-                }
-            });
-        })
-    }).then(function(decodedUserId) {
-        // check if the token is unique
-        return new Promise(function(resolve, reject){
-            Token.findOne({ 'token': token }, function (err, record) {
-                if (record && (record._user.toString() === decodedUserId)){
-                    resolve(decodedUserId)
-                } else {
-                    reject()
-                }
-            });
-        })
-    }).then(function(decodedUserId) {
-        req.user_id = decodedUserId;
-        next();
-    }).catch(function(){
-        res.sendStatus(401);
-    })
+    }
 };
 
 module.exports = tokenController;

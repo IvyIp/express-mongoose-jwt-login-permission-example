@@ -1,6 +1,6 @@
 
 # express-mongoose-jwt-single-login-example
-Example of token login system using express and mongodb. Each user is allowed to own one valid token only.
+Example of token login system with permission handling using express and mongodb. Each user is allowed to own one valid token only.
 
 
 ## Requirements
@@ -34,6 +34,11 @@ Set req.header('x-jwt') as the token issued above.
 Set req.header('x-user') as the username.  
 Token that mounted with this user will be expired.  
 
+ - GET /user/admin
+Set req.header('x-jwt') as the token issued above.  
+Set req.header('x-user') as the username.  
+Only user with admin role can view this page.    
+
  - GET /loginOnly
 Set req.header('x-jwt') as the token issued above.  
 Set req.header('x-user') as the username.  
@@ -41,9 +46,10 @@ Please refer to routes/loginOnly.js. Authentication is required of all routes un
 
 ## Details
 The authentication process is done by adding middleware (token.verify) in the route that you would like to prevent from unauthorized access.  
-And the process is consit of 3 steps:  
+And the process is consit of 4 steps:  
  1. Verify if the token is valid with the secret key
  2. Verify expiration time and userId from the payload of the token
+ 4. Compare the permission.
  3. Verify the token with the document in the collection called "tokens".
 
 Upon successful authentication, userId will be passed as **req.user_id** to the next function.

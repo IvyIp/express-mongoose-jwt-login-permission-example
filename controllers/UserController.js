@@ -8,23 +8,29 @@ var userController = {};
 userController.register = function(req, res) {
     var username = req.body.username;
     var password = req.body.password;
-    if ( username && password ){
-        User.create({ username: username, password: password }, function (err, user) {
-            if (err) {
-                res.sendStatus(400)
-            }else{
-                tokenController.mount(user._id, function(result){
-                    if (result === false){
-                        res.sendStatus(500)
-                    }else {
-                        res.json({token: result})
-                    }
-                });
-            }
+    var role = req.body.role;
+
+    new Promise(function(resolve, reject){
+        if ( username && password ) { resolve(); } else { reject('invalid post data') }
+    }).then(function(){
+        return new Promise(function (resolve, reject){
+            User.create({ username: username, password: password, role: role }, function (err, user) {
+                if (err) reject(err);
+                resolve(user._id);
+            })
         })
-    }else{
-        res.sendStatus(400);
-    }
+    }).then(function(userId){
+        tokenController.mount(userId, function(result){
+            if (result === false){
+                res.sendStatus(500)
+            }else {
+                res.json({token: result})
+            }
+        });
+    }).catch(function(err){
+        console.log(err);
+        res.sendStatus(400)
+    })
 };
 
 userController.login = function(req, res){
@@ -56,7 +62,7 @@ userController.logout = function(req, res){
     });
 };
 
-userController.private =function (req, res){
+userController.private = function (req, res){
     var userId = req.user_id;
     User.findById(userId, function (err, user) {
         if (user) {
@@ -65,6 +71,10 @@ userController.private =function (req, res){
             res.sendStatus(500)
         }
     });
+};
+
+userController.admin = function (req, res){
+    res.send('this can be viewed by user with admin role only');
 };
 
 module.exports = userController;
