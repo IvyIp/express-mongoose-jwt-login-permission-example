@@ -10,6 +10,7 @@ var mongoose = require('mongoose');
 
 var index = require('./routes/index');
 var user = require('./routes/user');
+var loginOnly = require('./routes/loginOnly');
 
 var config = require('./config');
 
@@ -34,6 +35,7 @@ mongoose.connect(config.mongodb.path)
 
 app.use('/', index);
 app.use('/user', user);
+app.use('/loginOnly', loginOnly);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
